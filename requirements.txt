@@ -1,0 +1,5 @@
+playwright>=1.40
+httpx>=0.27
+Pillow>=10.0
+tqdm>=4.66
+customtkinter>=5.2
