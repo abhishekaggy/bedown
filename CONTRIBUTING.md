@@ -16,7 +16,7 @@ The CLI works without the GUI dependencies, so a server install can do `pip inst
 ## Local development
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/bedown.git
+git clone https://github.com/abhishekaggy/bedown.git
 cd bedown
 python3 -m venv .venv
 source .venv/bin/activate

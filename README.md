@@ -20,7 +20,7 @@ Bedown is a small open-source Mac app for designers who want their Behance work 
 ### For developers (CLI)
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/bedown.git
+git clone https://github.com/abhishekaggy/bedown.git
 cd bedown
 python3 -m venv .venv
 source .venv/bin/activate
