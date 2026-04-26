@@ -38,15 +38,18 @@ def _candidate_browsers_dirs() -> list[Path]:
     PyInstaller's `datas` land under sys._MEIPASS, but Chromium itself is
     copied into Contents/Resources/ms-playwright by the build_app.sh
     post-build step (PyInstaller's binary processor breaks on the nested
-    Chrome for Testing Mach-O)."""
+    Chrome for Testing Mach-O).
+
+    Bundle layout for a macOS .app produced by PyInstaller:
+        Bedown.app/Contents/Frameworks   <-- sys._MEIPASS
+        Bedown.app/Contents/Resources    <-- where build_app.sh puts ms-playwright
+    """
     root = _bundle_resource_root()
     candidates: list[Path] = []
     if root is not None:
         candidates.append(root / "ms-playwright")
-        # Walk up out of Contents/Frameworks → Contents/Resources/ms-playwright.
-        # Layout: Bedown.app/Contents/Frameworks/_internal (== _MEIPASS)
-        contents = root.parent.parent
-        candidates.append(contents / "Resources" / "ms-playwright")
+        # _MEIPASS == Contents/Frameworks ; .parent == Contents
+        candidates.append(root.parent / "Resources" / "ms-playwright")
     return candidates
 
 
