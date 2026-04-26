@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bedown — Download your Behance portfolio in one click</title>
+  <meta name="description" content="A small free Mac app that downloads your entire Behance portfolio — images, titles, descriptions, and tags — into a clean folder on your Desktop.">
+  <meta property="og:title" content="Bedown — Download your Behance portfolio in one click">
+  <meta property="og:description" content="A small free Mac app that downloads your entire Behance portfolio — images, titles, descriptions, and tags — into a clean folder on your Desktop.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0b0b0c">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📥%3C/text%3E%3C/svg%3E">
+  <style>
+    :root {
+      --bg: #fafaf9;
+      --bg-alt: #ffffff;
+      --ink: #0b0b0c;
+      --ink-soft: #4a4a4f;
+      --ink-muted: #7a7a82;
+      --rule: #e8e6e1;
+      --accent: #1d4ed8;
+      --accent-hover: #1e3fb6;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+      --radius: 12px;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b0b0c;
+        --bg-alt: #141416;
+        --ink: #f4f4f3;
+        --ink-soft: #c8c8cc;
+        --ink-muted: #888890;
+        --rule: #26262a;
+        --accent: #60a5fa;
+        --accent-hover: #93c5fd;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.4);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 17px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); text-decoration: underline; }
+    code { font-family: var(--mono); font-size: 0.9em; background: var(--bg-alt); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--rule); }
+    h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin: 0; }
+    h2 { font-size: 28px; margin-bottom: 18px; }
+    h3 { font-size: 18px; margin-bottom: 6px; }
+    p { margin: 0 0 14px; color: var(--ink-soft); }
+    ul { padding-left: 20px; color: var(--ink-soft); }
+    ul li { margin-bottom: 6px; }
+
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+    /* HEADER */
+    header.nav {
+      padding: 28px 0;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 15px;
+    }
+    .brand { font-weight: 700; letter-spacing: -0.01em; }
+    .brand .dot { color: var(--accent); }
+    .nav-links { display: flex; gap: 22px; color: var(--ink-muted); }
+    .nav-links a { color: var(--ink-soft); }
+
+    /* HERO */
+    .hero { padding: 56px 0 64px; text-align: left; }
+    .hero h1 {
+      font-size: clamp(40px, 7vw, 64px);
+      letter-spacing: -0.035em;
+      margin-bottom: 18px;
+    }
+    .hero .lede {
+      font-size: 21px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+      max-width: 580px;
+      margin-bottom: 32px;
+    }
+    .cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 22px;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 16px;
+      transition: transform .08s ease, background .15s ease, color .15s ease;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--ink);
+      color: var(--bg);
+      box-shadow: var(--shadow);
+    }
+    .btn-primary:hover { background: var(--accent); color: #fff; text-decoration: none; transform: translateY(-1px); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--rule);
+    }
+    .btn-secondary:hover { background: var(--bg-alt); text-decoration: none; }
+    .btn .arrow { font-size: 13px; opacity: .8; }
+    .meta-line {
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+    .meta-line .sep { margin: 0 8px; opacity: .5; }
+
+    /* SECTION */
+    section { padding: 56px 0; border-top: 1px solid var(--rule); }
+    section h2 + p.section-lede {
+      margin-top: -8px;
+      margin-bottom: 28px;
+      color: var(--ink-soft);
+    }
+
+    /* INSTALL STEPS */
+    .steps { display: grid; gap: 20px; }
+    .step {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--bg-alt);
+      border: 1px solid var(--rule);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+    }
+    .step h3 { margin-bottom: 4px; }
+    .step p { margin-bottom: 0; }
+
+    /* FAQ */
+    .faq details {
+      border-top: 1px solid var(--rule);
+      padding: 18px 0;
+    }
+    .faq details:last-child { border-bottom: 1px solid var(--rule); }
+    .faq summary {
+      font-weight: 600;
+      font-size: 17px;
+      cursor: pointer;
+      list-style: none;
+      display: flex; justify-content: space-between; align-items: center;
+      color: var(--ink);
+    }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after {
+      content: "+";
+      font-size: 22px;
+      color: var(--ink-muted);
+      font-weight: 400;
+      line-height: 1;
+      transition: transform .2s ease;
+    }
+    .faq details[open] summary::after { content: "−"; }
+    .faq .answer { padding-top: 12px; color: var(--ink-soft); }
+    .faq .answer p:last-child { margin-bottom: 0; }
+
+    /* SAFETY */
+    .safety {
+      background: var(--bg-alt);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .safety .icon { font-size: 22px; line-height: 1; padding-top: 2px; }
+    .safety h3 { margin-bottom: 8px; }
+    .safety ul { margin: 0; }
+
+    /* BUILT BY */
+    .builtby {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 22px;
+      align-items: center;
+      background: var(--bg-alt);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: 0.02em;
+      box-shadow: var(--shadow);
+    }
+    .builtby .name {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .builtby p {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+    .builtby .links {
+      display: flex; gap: 14px;
+      font-size: 14px;
+    }
+    @media (max-width: 480px) {
+      .builtby { grid-template-columns: 1fr; text-align: left; }
+      .avatar { margin: 0; }
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 40px 0 60px;
+      color: var(--ink-muted);
+      font-size: 14px;
+      border-top: 1px solid var(--rule);
+    }
+    footer .row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    footer a { color: var(--ink-soft); }
+
+    @media (max-width: 540px) {
+      .hero { padding: 32px 0 40px; }
+      .hero .lede { font-size: 18px; }
+      section { padding: 40px 0; }
+      .nav-links { gap: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="nav">
+    <div class="brand">Bedown<span class="dot">.</span></div>
+    <nav class="nav-links">
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/abhishekaggy/bedown">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <section class="hero" style="border-top: none; padding-top: 56px;">
+      <h1>Download your entire Behance portfolio in one click.</h1>
+      <p class="lede">
+        Bedown is a small, free Mac app that pulls every project from any
+        Behance profile into a tidy folder on your Desktop — images, titles,
+        descriptions, and tags. No screen recorder, no 200 browser tabs.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/abhishekaggy/bedown/releases/latest/download/Bedown.app.zip">
+          ↓ Download for Mac
+        </a>
+        <a class="btn btn-secondary" href="https://github.com/abhishekaggy/bedown">
+          View on GitHub <span class="arrow">→</span>
+        </a>
+      </div>
+      <div class="meta-line">
+        v0.1.0 <span class="sep">·</span>
+        macOS 11+ (Apple Silicon) <span class="sep">·</span>
+        ~294&nbsp;MB <span class="sep">·</span>
+        MIT licensed
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>Install in 30 seconds</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div>
+            <h3>Download and unzip</h3>
+            <p>Click the button above. You'll get <code>Bedown.app.zip</code>. Double-click to unzip — drag <code>Bedown.app</code> wherever you keep apps.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div>
+            <h3>First launch: right-click → Open</h3>
+            <p>macOS blocks unsigned apps on first launch (Bedown isn't notarized — see the FAQ). Right-click <code>Bedown.app</code> → <strong>Open</strong> → confirm. You only do this once.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div>
+            <h3>Paste a Behance URL → Download</h3>
+            <p>Drop in any public Behance profile URL (e.g. <code>https://www.behance.net/yourname</code>) and click Download. Your portfolio lands in <code>~/Desktop/&lt;username&gt;-portfolio/</code>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="safety">
+      <h2>Is it safe?</h2>
+      <p class="section-lede">Short version: yes. Bedown runs entirely on your Mac and the source is open for anyone to read.</p>
+      <div class="safety">
+        <div class="icon">🔒</div>
+        <div>
+          <h3>What Bedown does and doesn't do</h3>
+          <ul>
+            <li><strong>No telemetry, no analytics, no accounts.</strong> The app makes zero network calls except to Behance itself, to fetch the pages you ask it to.</li>
+            <li><strong>Everything stays on your Mac.</strong> Images and metadata are written to a folder on your Desktop. Nothing is uploaded anywhere.</li>
+            <li><strong>Open source under the MIT license.</strong> The full source is on <a href="https://github.com/abhishekaggy/bedown">GitHub</a> — read every line if you want.</li>
+            <li><strong>Built with Playwright + Python.</strong> The bundled Chromium is the same browser engine Chrome uses; Bedown drives it the way an automated test would.</li>
+            <li><strong>Read-only against Behance.</strong> Bedown only fetches public pages — it doesn't sign in, post, edit, or delete anything.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="faq">
+      <h2>FAQ</h2>
+
+      <details>
+        <summary>Why is the download nearly 300 MB?</summary>
+        <div class="answer">
+          <p>Most of that is a bundled copy of <strong>Chromium</strong> — the headless browser Bedown uses to load Behance pages and find the image URLs. Behance is a heavy single-page app, so a real browser is the only reliable way to scrape it.</p>
+          <p>The trade-off: you don't have to install Python, Playwright, or Chromium yourself. Double-click and it just works. If you'd prefer the lightweight path, the CLI (<code>pip install</code>) is a few MB — see the GitHub README.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Why does macOS warn me on first launch?</summary>
+        <div class="answer">
+          <p>Bedown isn't code-signed by Apple. Code signing requires a $99/year Apple Developer account, which I haven't set up for a free side project. macOS Gatekeeper warns about unsigned apps as a safety default.</p>
+          <p>The standard one-time bypass: <strong>right-click <code>Bedown.app</code> → Open → Open</strong>. After that macOS remembers and launches normally. (You can also confirm in System Settings → Privacy &amp; Security after a denied launch.)</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>What does Bedown actually save?</summary>
+        <div class="answer">
+          <p>For each project in the profile, you get a folder containing:</p>
+          <ul>
+            <li>Every image, resized to max 1200&nbsp;px wide and saved as a JPEG (configurable).</li>
+            <li>A <code>meta.json</code> with the project's title, URL, description, and tags.</li>
+          </ul>
+          <p>And at the top level, a <code>projects.json</code> summarising every project. Easy to hand to Notion, a portfolio site, or another script.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>What doesn't it do?</summary>
+        <div class="answer">
+          <ul>
+            <li>Login-required and adult-content projects are skipped (Bedown runs logged out).</li>
+            <li>It doesn't post, edit, or delete anything on Behance.</li>
+            <li>Video previews, embedded Vimeo/YouTube, and audio are not downloaded — only images.</li>
+            <li>Currently macOS Apple Silicon only. Intel Mac and Windows builds are open PRs on GitHub.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>Is it resumable? Can I cancel mid-run?</summary>
+        <div class="answer">
+          <p>Yes to both. Cancel stops cleanly. If you re-run on the same profile, projects you've already downloaded are skipped — so you can interrupt anytime and pick up later.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>How long does a full run take?</summary>
+        <div class="answer">
+          <p>Roughly 5–15 seconds per project plus image download time. A 30-project portfolio takes about 5 minutes; a 100-project one can take 15–30 minutes. There's a default 2-second pause between projects to be polite to Behance — please don't lower it to something rude.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>I'm a developer — can I use just the CLI?</summary>
+        <div class="answer">
+          <p>Yes. <code>pip install</code> from the GitHub repo, then <code>playwright install chromium</code>, then <code>bedown &lt;url&gt;</code>. See the <a href="https://github.com/abhishekaggy/bedown#for-developers-cli">README</a> for details. The CLI and the Mac app share the same scraping core.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Something broke. How do I report it?</summary>
+        <div class="answer">
+          <p>Open an <a href="https://github.com/abhishekaggy/bedown/issues/new/choose">issue on GitHub</a> with the Behance URL that triggered the problem and the log output from the status box. Behance changes its HTML occasionally — that's the most common cause of breakage and the easiest to fix.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="builtby">
+      <h2>Built by</h2>
+      <div class="builtby">
+        <div class="avatar" aria-hidden="true">AA</div>
+        <div>
+          <div class="name">Abhishek Agarwal</div>
+          <p>Bedown is a side project — built because copy-pasting a Behance portfolio shouldn't take an afternoon. If you find it useful or something breaks, I'd love to hear from you.</p>
+          <div class="links">
+            <a href="https://www.linkedin.com/in/aggyabhishek/">LinkedIn</a>
+            <span style="color: var(--ink-muted)">·</span>
+            <a href="https://github.com/abhishekaggy">GitHub</a>
+            <span style="color: var(--ink-muted)">·</span>
+            <a href="https://github.com/abhishekaggy/bedown/issues/new/choose">Send feedback</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="row">
+      <div>Bedown is open source under the <a href="https://github.com/abhishekaggy/bedown/blob/main/LICENSE">MIT license</a>.</div>
+      <div>
+        <a href="https://github.com/abhishekaggy/bedown">GitHub</a> ·
+        <a href="https://github.com/abhishekaggy/bedown/releases">Releases</a> ·
+        <a href="https://github.com/abhishekaggy/bedown/issues/new/choose">Report an issue</a>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>
