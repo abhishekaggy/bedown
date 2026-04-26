@@ -19,12 +19,20 @@ import customtkinter as ctk
 from tkinter import filedialog
 
 from bedown import __version__
+from bedown.runtime import default_app_output_dir, is_bundled
 from bedown.scraper import (
     ScrapeOptions,
     default_output_dir,
     is_valid_behance_profile_url,
     run as run_scrape,
 )
+
+
+def _default_output(profile_url: str) -> Path:
+    """When bundled, save to Desktop. When running from source, save to cwd."""
+    if is_bundled():
+        return default_app_output_dir(profile_url)
+    return default_output_dir(profile_url)
 
 
 # Sentinel objects placed on the queue for non-log events.
@@ -182,7 +190,7 @@ class BedownApp(ctk.CTk):
             return
         url = self.url_entry.get().strip()
         if is_valid_behance_profile_url(url):
-            self._output_dir = default_output_dir(url)
+            self._output_dir = _default_output(url)
             self.folder_label.configure(text=str(self._output_dir))
         else:
             self._output_dir = None
@@ -263,7 +271,7 @@ class BedownApp(ctk.CTk):
             return
 
         if self._output_dir is None:
-            self._output_dir = default_output_dir(url)
+            self._output_dir = _default_output(url)
 
         opts = ScrapeOptions(
             profile_url=url,
