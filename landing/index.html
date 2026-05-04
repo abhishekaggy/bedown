@@ -311,7 +311,7 @@
 </head>
 <body>
 
-<form name="bedown-download" netlify netlify-honeypot="bot-field" hidden>
+<form name="bedown-download" method="POST" action="/thanks.html" netlify netlify-honeypot="bot-field" hidden>
   <input type="email" name="email">
   <input type="text" name="submitted-after-ms">
   <input type="text" name="bot-field">
@@ -551,6 +551,7 @@
     const email = document.getElementById("email");
     const error = document.getElementById("form-error");
     const elapsed = document.getElementById("submitted-after-ms");
+    const submitButton = form.querySelector("button[type='submit']");
     const startedAt = Date.now();
     const blockedDomains = new Set([
       "10minutemail.com",
@@ -571,7 +572,13 @@
       error.style.display = "block";
     }
 
-    form.addEventListener("submit", function (event) {
+    function setSubmitting(isSubmitting) {
+      submitButton.disabled = isSubmitting;
+      submitButton.textContent = isSubmitting ? "Preparing download…" : "Get download link";
+    }
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
       error.style.display = "none";
       const value = email.value.trim().toLowerCase();
       const domain = value.split("@").pop();
@@ -579,20 +586,41 @@
       elapsed.value = String(ms);
 
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-        event.preventDefault();
         showError("Please enter a valid email address.");
         return;
       }
 
       if (blockedDomains.has(domain)) {
-        event.preventDefault();
         showError("Please use a real email address so I can follow up if the app breaks.");
         return;
       }
 
       if (ms < 2500) {
-        event.preventDefault();
         showError("That was a little too fast. Please try again.");
+        return;
+      }
+
+      if (window.location.protocol === "file:") {
+        window.location.href = "thanks.html";
+        return;
+      }
+
+      try {
+        setSubmitting(true);
+        const response = await fetch("/", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams(new FormData(form)).toString()
+        });
+
+        if (!response.ok) {
+          throw new Error("Form submission failed");
+        }
+
+        window.location.assign("/thanks.html");
+      } catch (_error) {
+        setSubmitting(false);
+        showError("Something went wrong. Please refresh and try again.");
       }
     });
   })();
