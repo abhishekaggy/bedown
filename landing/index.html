@@ -118,6 +118,67 @@
     }
     .meta-line .sep { margin: 0 8px; opacity: .5; }
 
+    /* EMAIL CAPTURE */
+    .capture {
+      background: var(--bg-alt);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .capture-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    input[type="email"] {
+      width: 100%;
+      min-height: 50px;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: var(--bg);
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+    }
+    input[type="email"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+    .hidden-field {
+      position: absolute;
+      left: -5000px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .form-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+    .form-error {
+      margin-top: 10px;
+      color: #b91c1c;
+      font-size: 14px;
+      display: none;
+    }
+    @media (prefers-color-scheme: dark) {
+      .form-error { color: #fca5a5; }
+    }
+    @media (max-width: 620px) {
+      .capture-grid { grid-template-columns: 1fr; }
+      .capture .btn { justify-content: center; }
+    }
+
     /* SECTION */
     section { padding: 56px 0; border-top: 1px solid var(--rule); }
     section h2 + p.section-lede {
@@ -255,6 +316,7 @@
   <header class="nav">
     <div class="brand">Bedown<span class="dot">.</span></div>
     <nav class="nav-links">
+      <a href="#download">Download</a>
       <a href="#install">Install</a>
       <a href="#faq">FAQ</a>
       <a href="https://github.com/abhishekaggy/bedown">GitHub</a>
@@ -271,7 +333,7 @@
         descriptions, and tags. No screen recorder, no 200 browser tabs.
       </p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/abhishekaggy/bedown/releases/latest/download/Bedown.app.zip">
+        <a class="btn btn-primary" href="#download">
           ↓ Download for Mac
         </a>
         <a class="btn btn-secondary" href="https://github.com/abhishekaggy/bedown">
@@ -286,6 +348,39 @@
       </div>
     </section>
 
+    <section id="download">
+      <h2>Download Bedown</h2>
+      <p class="section-lede">
+        Leave your email and the download starts on the next page. I only use this to understand who is testing Bedown and to follow up if something breaks.
+      </p>
+      <form
+        class="capture"
+        name="bedown-download"
+        method="POST"
+        action="/thanks.html"
+        data-netlify="true"
+        data-netlify-honeypot="bot-field"
+        id="download-form"
+      >
+        <input type="hidden" name="form-name" value="bedown-download">
+        <input type="hidden" name="submitted-after-ms" id="submitted-after-ms" value="">
+        <p class="hidden-field">
+          <label>Don't fill this out if you're human: <input name="bot-field"></label>
+        </p>
+        <div class="capture-grid">
+          <div>
+            <label for="email">Email address</label>
+            <input id="email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" required>
+          </div>
+          <button class="btn btn-primary" type="submit">Get download link</button>
+        </div>
+        <div class="form-error" id="form-error" role="alert"></div>
+        <p class="form-note">
+          No newsletter trap. No selling your email. Basic spam checks block throwaway domains and bot submissions.
+        </p>
+      </form>
+    </section>
+
     <section id="install">
       <h2>Install in 30 seconds</h2>
       <div class="steps">
@@ -293,7 +388,7 @@
           <div class="step-num">1</div>
           <div>
             <h3>Download and unzip</h3>
-            <p>Click the button above. You'll get <code>Bedown.app.zip</code>. Double-click to unzip — drag <code>Bedown.app</code> wherever you keep apps.</p>
+            <p>Enter your email in the download form. You'll get <code>Bedown.app.zip</code>. Double-click to unzip — drag <code>Bedown.app</code> wherever you keep apps.</p>
           </div>
         </div>
         <div class="step">
@@ -333,6 +428,14 @@
 
     <section id="faq" class="faq">
       <h2>FAQ</h2>
+
+      <details>
+        <summary>Why do you ask for an email before download?</summary>
+        <div class="answer">
+          <p>This is an early tester build, so I want a simple way to understand how many people are trying it and who to follow up with if something breaks. It is not a newsletter signup, and I am not selling or sharing the list.</p>
+          <p>Because Bedown is open source, the GitHub release is still public. The email form is there to make tester feedback easier, not to hide the project.</p>
+        </div>
+      </details>
 
       <details>
         <summary>Why is the download nearly 300 MB?</summary>
@@ -435,6 +538,59 @@
   </footer>
 
 </div>
+
+<script>
+  (function () {
+    const form = document.getElementById("download-form");
+    const email = document.getElementById("email");
+    const error = document.getElementById("form-error");
+    const elapsed = document.getElementById("submitted-after-ms");
+    const startedAt = Date.now();
+    const blockedDomains = new Set([
+      "10minutemail.com",
+      "anonaddy.com",
+      "dispostable.com",
+      "guerrillamail.com",
+      "mailinator.com",
+      "maildrop.cc",
+      "sharklasers.com",
+      "tempmail.com",
+      "temp-mail.org",
+      "throwawaymail.com",
+      "yopmail.com"
+    ]);
+
+    function showError(message) {
+      error.textContent = message;
+      error.style.display = "block";
+    }
+
+    form.addEventListener("submit", function (event) {
+      error.style.display = "none";
+      const value = email.value.trim().toLowerCase();
+      const domain = value.split("@").pop();
+      const ms = Date.now() - startedAt;
+      elapsed.value = String(ms);
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        event.preventDefault();
+        showError("Please enter a valid email address.");
+        return;
+      }
+
+      if (blockedDomains.has(domain)) {
+        event.preventDefault();
+        showError("Please use a real email address so I can follow up if the app breaks.");
+        return;
+      }
+
+      if (ms < 2500) {
+        event.preventDefault();
+        showError("That was a little too fast. Please try again.");
+      }
+    });
+  })();
+</script>
 
 </body>
 </html>

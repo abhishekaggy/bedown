@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bedown — Download starting</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0b0b0c">
+  <style>
+    :root {
+      --bg: #fafaf9;
+      --bg-alt: #ffffff;
+      --ink: #0b0b0c;
+      --ink-soft: #4a4a4f;
+      --ink-muted: #7a7a82;
+      --rule: #e8e6e1;
+      --accent: #1d4ed8;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+      --radius: 12px;
+      --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b0b0c;
+        --bg-alt: #141416;
+        --ink: #f4f4f3;
+        --ink-soft: #c8c8cc;
+        --ink-muted: #888890;
+        --rule: #26262a;
+        --accent: #60a5fa;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.4);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 17px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      padding: 24px;
+    }
+    main {
+      width: min(620px, 100%);
+      background: var(--bg-alt);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 34px;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(34px, 7vw, 52px);
+      letter-spacing: -0.035em;
+      line-height: 1.1;
+    }
+    p { margin: 0 0 16px; color: var(--ink-soft); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 22px;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 16px;
+      background: var(--ink);
+      color: var(--bg);
+      text-decoration: none;
+      box-shadow: var(--shadow);
+    }
+    .btn:hover { background: var(--accent); color: #fff; }
+    .note {
+      margin-top: 18px;
+      font-size: 14px;
+      color: var(--ink-muted);
+    }
+    code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: .9em;
+      background: var(--bg);
+      border: 1px solid var(--rule);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Thanks — download starting.</h1>
+    <p>
+      Bedown should begin downloading automatically. If your browser blocks it,
+      use the button below.
+    </p>
+    <p>
+      <a
+        class="btn"
+        id="download"
+        href="https://github.com/abhishekaggy/bedown/releases/latest/download/Bedown.app.zip"
+      >↓ Download Bedown.app.zip</a>
+    </p>
+    <p class="note">
+      After unzipping: right-click <code>Bedown.app</code> → <strong>Open</strong> on first launch.
+      Bedown is unsigned, so macOS needs that one-time confirmation.
+    </p>
+    <p class="note">
+      Something broke? <a href="https://github.com/abhishekaggy/bedown/issues/new/choose">Send feedback on GitHub</a>.
+    </p>
+  </main>
+  <script>
+    window.setTimeout(function () {
+      document.getElementById("download").click();
+    }, 700);
+  </script>
+</body>
+</html>
