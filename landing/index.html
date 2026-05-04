@@ -311,6 +311,12 @@
 </head>
 <body>
 
+<form name="bedown-download" netlify netlify-honeypot="bot-field" hidden>
+  <input type="email" name="email">
+  <input type="text" name="submitted-after-ms">
+  <input type="text" name="bot-field">
+</form>
+
 <div class="wrap">
 
   <header class="nav">
@@ -358,8 +364,8 @@
         name="bedown-download"
         method="POST"
         action="/thanks.html"
-        data-netlify="true"
-        data-netlify-honeypot="bot-field"
+        netlify
+        netlify-honeypot="bot-field"
         id="download-form"
       >
         <input type="hidden" name="form-name" value="bedown-download">
