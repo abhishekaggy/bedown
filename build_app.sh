@@ -26,13 +26,12 @@ if [[ ! -x "$PYINSTALLER" ]]; then
 fi
 
 CHROMIUM_CACHE="$HOME/Library/Caches/ms-playwright"
-# Both the full Chromium and the lighter headless_shell are needed:
-# Playwright >=1.49 routes `chromium.launch(headless=True)` through
-# chromium_headless_shell by default.
-CHROMIUM_DIR="$(ls -1d "$CHROMIUM_CACHE"/chromium-[0-9]* 2>/dev/null | sort | tail -n 1 || true)"
+# Bedown always launches with headless=True. Playwright >=1.49 routes headless
+# launches through chromium_headless_shell, so we only need to bundle that
+# binary — the full ~280 MB Chromium directory is not used at runtime.
 HEADLESS_DIR="$(ls -1d "$CHROMIUM_CACHE"/chromium_headless_shell-[0-9]* 2>/dev/null | sort | tail -n 1 || true)"
-if [[ -z "$CHROMIUM_DIR" || -z "$HEADLESS_DIR" ]]; then
-    echo "Missing Playwright browsers in $CHROMIUM_CACHE."
+if [[ -z "$HEADLESS_DIR" ]]; then
+    echo "Missing Playwright headless-shell in $CHROMIUM_CACHE."
     echo "Run: $ROOT/.venv/bin/playwright install chromium"
     exit 1
 fi
@@ -52,16 +51,12 @@ fi
 BROWSERS_DEST="$APP/Contents/Resources/ms-playwright"
 mkdir -p "$BROWSERS_DEST"
 
-for SRC in "$CHROMIUM_DIR" "$HEADLESS_DIR"; do
-    NAME="$(basename "$SRC")"
-    echo "==> Copying $NAME → $BROWSERS_DEST/$NAME"
-    cp -Rp "$SRC" "$BROWSERS_DEST/"
-done
+NAME="$(basename "$HEADLESS_DIR")"
+echo "==> Copying $NAME → $BROWSERS_DEST/$NAME"
+cp -Rp "$HEADLESS_DIR" "$BROWSERS_DEST/"
 
-# Belt-and-braces: ensure executables are still +x after copy.
-CHROME_BIN="$BROWSERS_DEST/$(basename "$CHROMIUM_DIR")/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
-HEADLESS_BIN="$BROWSERS_DEST/$(basename "$HEADLESS_DIR")/chrome-headless-shell-mac-arm64/chrome-headless-shell"
-[[ -f "$CHROME_BIN" ]] && chmod +x "$CHROME_BIN"
+# Belt-and-braces: ensure executable is still +x after copy.
+HEADLESS_BIN="$BROWSERS_DEST/$NAME/chrome-headless-shell-mac-arm64/chrome-headless-shell"
 [[ -f "$HEADLESS_BIN" ]] && chmod +x "$HEADLESS_BIN"
 
 echo "==> Done: $APP"
