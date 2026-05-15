@@ -332,11 +332,12 @@
   <main>
 
     <section class="hero" style="border-top: none; padding-top: 56px;">
-      <h1>Download your entire Behance portfolio in one click.</h1>
+      <h1>Download any Behance portfolio or project in one click.</h1>
       <p class="lede">
-        Bedown is a small, free Mac app that pulls every project from any
-        Behance profile into a tidy folder on your Desktop — images, titles,
-        descriptions, and tags. No screen recorder, no 200 browser tabs.
+        Bedown is a small, free Mac app that saves every project from a
+        Behance profile — or just a single project — into a tidy folder on
+        your Desktop. Images, titles, descriptions, and tags. No screen
+        recorder, no 200 browser tabs.
       </p>
       <div class="cta-row">
         <a class="btn btn-primary" href="#download">
@@ -349,7 +350,7 @@
       <div class="meta-line">
         v0.1.0 <span class="sep">·</span>
         macOS 11+ (Apple Silicon) <span class="sep">·</span>
-        ~294&nbsp;MB <span class="sep">·</span>
+        ~90&nbsp;MB <span class="sep">·</span>
         MIT licensed
       </div>
     </section>
@@ -408,7 +409,7 @@
           <div class="step-num">3</div>
           <div>
             <h3>Paste a Behance URL → Download</h3>
-            <p>Drop in any public Behance profile URL (e.g. <code>https://www.behance.net/yourname</code>) and click Download. Your portfolio lands in <code>~/Desktop/&lt;username&gt;-portfolio/</code>.</p>
+            <p>Paste a <strong>profile URL</strong> (e.g. <code>https://www.behance.net/yourname</code>) to download an entire portfolio, or a <strong>project URL</strong> (e.g. <code>https://www.behance.net/gallery/12345/Name</code>) to grab just one project. Click Download — files land on your Desktop.</p>
           </div>
         </div>
       </div>
@@ -444,10 +445,10 @@
       </details>
 
       <details>
-        <summary>Why is the download nearly 300 MB?</summary>
+        <summary>Why is the download ~90 MB?</summary>
         <div class="answer">
-          <p>Most of that is a bundled copy of <strong>Chromium</strong> — the headless browser Bedown uses to load Behance pages and find the image URLs. Behance is a heavy single-page app, so a real browser is the only reliable way to scrape it.</p>
-          <p>The trade-off: you don't have to install Python, Playwright, or Chromium yourself. Double-click and it just works. If you'd prefer the lightweight path, the CLI (<code>pip install</code>) is a few MB — see the GitHub README.</p>
+          <p>The bulk of the size is a bundled copy of <strong>Chromium's headless shell</strong> — the browser engine Bedown uses to load Behance pages and find image URLs. Behance is a heavy single-page app, so a real browser is the only reliable way to scrape it.</p>
+          <p>The trade-off: you don't have to install Python, Playwright, or Chromium yourself. Double-click and it just works. If you'd prefer the smallest possible install, the CLI (<code>pip install</code>) is a few MB — see the GitHub README.</p>
         </div>
       </details>
 
@@ -522,7 +523,11 @@
           <div class="links">
             <a href="https://www.linkedin.com/in/aggyabhishek/">LinkedIn</a>
             <span style="color: var(--ink-muted)">·</span>
+            <a href="https://x.com/aggyabhishek">X / Twitter</a>
+            <span style="color: var(--ink-muted)">·</span>
             <a href="https://github.com/abhishekaggy">GitHub</a>
+            <span style="color: var(--ink-muted)">·</span>
+            <a href="mailto:aggyabhishek@gmail.com">aggyabhishek@gmail.com</a>
             <span style="color: var(--ink-muted)">·</span>
             <a href="https://github.com/abhishekaggy/bedown/issues/new/choose">Send feedback</a>
           </div>
@@ -534,11 +539,22 @@
 
   <footer>
     <div class="row">
-      <div>Bedown is open source under the <a href="https://github.com/abhishekaggy/bedown/blob/main/LICENSE">MIT license</a>.</div>
+      <div>Bedown is open source under the <a href="https://github.com/abhishekaggy/bedown/blob/main/LICENSE">MIT license</a>. Built by <a href="https://www.linkedin.com/in/aggyabhishek/">Aggy</a>.</div>
       <div>
         <a href="https://github.com/abhishekaggy/bedown">GitHub</a> ·
         <a href="https://github.com/abhishekaggy/bedown/releases">Releases</a> ·
         <a href="https://github.com/abhishekaggy/bedown/issues/new/choose">Report an issue</a>
+      </div>
+    </div>
+    <div class="row" style="margin-top: 10px;">
+      <div>
+        <a href="https://www.linkedin.com/in/aggyabhishek/">LinkedIn</a> ·
+        <a href="https://x.com/aggyabhishek">X / Twitter</a> ·
+        <a href="mailto:aggyabhishek@gmail.com">aggyabhishek@gmail.com</a>
+      </div>
+      <div>
+        <a href="https://twitter.com/intent/tweet?text=Just%20downloaded%20my%20entire%20Behance%20portfolio%20with%20Bedown%20%E2%80%94%20free%2C%20open-source%2C%20no%20login%20needed%20%E2%86%92%20https%3A%2F%2Fgithub.com%2Fabhishekaggy%2Fbedown">Share on X</a> ·
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fabhishekaggy%2Fbedown">Share on LinkedIn</a>
       </div>
     </div>
   </footer>
