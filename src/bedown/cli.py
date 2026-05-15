@@ -12,7 +12,7 @@ from bedown import __version__
 from bedown.scraper import (
     ScrapeOptions,
     default_output_dir,
-    is_valid_behance_profile_url,
+    is_valid_behance_url,
     run,
 )
 
@@ -20,14 +20,20 @@ from bedown.scraper import (
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="bedown",
-        description="Download an entire Behance portfolio (images + metadata).",
+        description="Download a Behance portfolio or individual project (images + metadata).",
     )
-    p.add_argument("profile_url", help="Behance profile URL, e.g. https://www.behance.net/foramdivrania")
+    p.add_argument(
+        "url",
+        help=(
+            "Behance profile URL (e.g. https://www.behance.net/username) "
+            "or single project URL (e.g. https://www.behance.net/gallery/12345/Name)"
+        ),
+    )
     p.add_argument(
         "-o", "--output",
         type=Path,
         default=None,
-        help="Output directory (default: <username>-portfolio in the current directory)",
+        help="Output directory (default: derived from the URL in the current directory)",
     )
     p.add_argument(
         "--max-width",
@@ -55,18 +61,19 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
-    if not is_valid_behance_profile_url(args.profile_url):
+    if not is_valid_behance_url(args.url):
         print(
-            f"Error: '{args.profile_url}' does not look like a Behance profile URL.\n"
-            "Expected something like https://www.behance.net/<username>",
+            f"Error: '{args.url}' does not look like a valid Behance URL.\n"
+            "Expected a profile (behance.net/username) "
+            "or project (behance.net/gallery/ID/name) URL.",
             file=sys.stderr,
         )
         return 2
 
-    output_dir = args.output or default_output_dir(args.profile_url)
+    output_dir = args.output or default_output_dir(args.url)
 
     opts = ScrapeOptions(
-        profile_url=args.profile_url,
+        url=args.url,
         output_dir=output_dir,
         max_width=args.max_width,
         headless=args.headless,

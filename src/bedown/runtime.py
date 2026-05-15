@@ -75,12 +75,17 @@ def setup_bundle_env() -> None:
         os.environ.setdefault("PLAYWRIGHT_DRIVER_PATH", str(driver_dir))
 
 
-def default_app_output_dir(profile_url: str) -> Path:
-    """Sensible default output directory when running as a bundled app:
-    ~/Desktop/<username>-portfolio (falls back to ~ if no Desktop)."""
-    from bedown.scraper import username_from_url
+def default_app_output_dir(url: str) -> Path:
+    """Sensible default output directory when running as a bundled app.
 
-    username = username_from_url(profile_url)
+    - Profile URL → ~/Desktop/<username>-portfolio
+    - Project URL → ~/Desktop/<project-slug>
+    Falls back to ~ if there is no Desktop directory.
+    """
+    from bedown.scraper import username_from_url, slug_from_url, is_valid_behance_project_url
+
     desktop = Path.home() / "Desktop"
     base = desktop if desktop.is_dir() else Path.home()
-    return base / f"{username}-portfolio"
+    if is_valid_behance_project_url(url):
+        return base / slug_from_url(url)
+    return base / f"{username_from_url(url)}-portfolio"

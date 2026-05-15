@@ -11,6 +11,8 @@ import queue
 import subprocess
 import sys
 import threading
+import urllib.parse
+import webbrowser
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -23,16 +25,17 @@ from bedown.runtime import default_app_output_dir, is_bundled
 from bedown.scraper import (
     ScrapeOptions,
     default_output_dir,
-    is_valid_behance_profile_url,
+    is_valid_behance_url,
+    is_valid_behance_project_url,
     run as run_scrape,
 )
 
 
-def _default_output(profile_url: str) -> Path:
+def _default_output(url: str) -> Path:
     """When bundled, save to Desktop. When running from source, save to cwd."""
     if is_bundled():
-        return default_app_output_dir(profile_url)
-    return default_output_dir(profile_url)
+        return default_app_output_dir(url)
+    return default_output_dir(url)
 
 
 # Sentinel objects placed on the queue for non-log events.
@@ -98,12 +101,12 @@ class BedownApp(ctk.CTk):
         ).pack(anchor="w")
 
         # URL input
-        ctk.CTkLabel(self, text="Behance profile URL", anchor="w").pack(
+        ctk.CTkLabel(self, text="Behance profile or project URL", anchor="w").pack(
             fill="x", padx=20, pady=(16, 2)
         )
         self.url_entry = ctk.CTkEntry(
             self,
-            placeholder_text="https://www.behance.net/yourname",
+            placeholder_text="https://www.behance.net/yourname  or  /gallery/123/…",
             height=36,
         )
         self.url_entry.pack(fill="x", **pad)
@@ -157,31 +160,54 @@ class BedownApp(ctk.CTk):
         self.progress.pack(fill="x", padx=20, pady=(0, 8))
         self.progress.pack_forget()
 
-        # Status text area
-        self._status_label = ctk.CTkLabel(self, text="Status", anchor="w")
-        self._status_label.pack(fill="x", padx=20, pady=(8, 2))
+        # Footer — attribution row (packed at bottom before content area)
+        footer_frame = ctk.CTkFrame(self, fg_color="transparent")
+        footer_frame.pack(side="bottom", fill="x", padx=20, pady=(0, 8))
+        ctk.CTkLabel(
+            footer_frame,
+            text=f"v{__version__}  ·  Built by Aggy  ·",
+            text_color=("gray55", "gray50"),
+            font=ctk.CTkFont(size=11),
+        ).pack(side="left")
+        for _label, _url in [
+            ("LinkedIn", "https://www.linkedin.com/in/aggyabhishek/"),
+            ("X", "https://x.com/aggyabhishek"),
+        ]:
+            ctk.CTkButton(
+                footer_frame, text=_label,
+                fg_color="transparent", hover_color=("gray88", "gray22"),
+                text_color=("gray55", "gray50"), font=ctk.CTkFont(size=11),
+                width=30, height=16,
+                command=lambda u=_url: webbrowser.open(u),
+            ).pack(side="left", padx=0)
+            ctk.CTkLabel(
+                footer_frame, text="·",
+                text_color=("gray55", "gray50"), font=ctk.CTkFont(size=11),
+            ).pack(side="left")
+        ctk.CTkButton(
+            footer_frame, text="aggyabhishek@gmail.com",
+            fg_color="transparent", hover_color=("gray88", "gray22"),
+            text_color=("gray55", "gray50"), font=ctk.CTkFont(size=11),
+            width=160, height=16,
+            command=lambda: webbrowser.open("mailto:aggyabhishek@gmail.com"),
+        ).pack(side="left", padx=0)
+
+        # Content area — holds either the status log or the success card
+        self._content_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self._content_frame.pack(fill="both", expand=True, padx=20, pady=(0, 6))
+
+        self._status_label = ctk.CTkLabel(self._content_frame, text="Status", anchor="w")
+        self._status_label.pack(fill="x", pady=(8, 2))
         self.status_box = ctk.CTkTextbox(
-            self,
+            self._content_frame,
             height=220,
             font=ctk.CTkFont(family="Menlo", size=12),
             wrap="word",
         )
-        self.status_box.pack(fill="both", expand=True, padx=20, pady=(0, 6))
+        self.status_box.pack(fill="both", expand=True)
         self.status_box.configure(state="disabled")
 
-        # Bottom row — Open folder button (hidden until success)
-        self.open_button = ctk.CTkButton(
-            self, text="Open output folder", width=180,
-            command=self._open_output_folder,
-        )
-        # Packed on completion.
-
-        self.footer = ctk.CTkLabel(
-            self, text=f"v{__version__}",
-            text_color=("gray60", "gray50"),
-            font=ctk.CTkFont(size=11),
-        )
-        self.footer.pack(side="bottom", pady=(0, 8))
+        self._success_frame: Optional[ctk.CTkFrame] = None
 
     # --------------------------------------------------------- UI helpers
 
@@ -189,7 +215,7 @@ class BedownApp(ctk.CTk):
         if self._user_picked_output:
             return
         url = self.url_entry.get().strip()
-        if is_valid_behance_profile_url(url):
+        if is_valid_behance_url(url):
             self._output_dir = _default_output(url)
             self.folder_label.configure(text=str(self._output_dir))
         else:
@@ -226,14 +252,6 @@ class BedownApp(ctk.CTk):
             if self.progress.winfo_ismapped():
                 self.progress.pack_forget()
 
-    def _show_open_button(self, show: bool) -> None:
-        if show:
-            if not self.open_button.winfo_ismapped():
-                self.open_button.pack(pady=(0, 6))
-        else:
-            if self.open_button.winfo_ismapped():
-                self.open_button.pack_forget()
-
     # ------------------------------------------------------- Run lifecycle
 
     def _on_download_click(self) -> None:
@@ -245,12 +263,13 @@ class BedownApp(ctk.CTk):
     def _start_run(self) -> None:
         url = self.url_entry.get().strip()
         if not url:
-            self._append_status("Please enter a Behance profile URL.")
+            self._append_status("Please enter a Behance profile or project URL.")
             return
-        if not is_valid_behance_profile_url(url):
+        if not is_valid_behance_url(url):
             self._append_status(
-                f"'{url}' does not look like a Behance profile URL.\n"
-                "Expected: https://www.behance.net/<username>"
+                f"'{url}' does not look like a valid Behance URL.\n"
+                "Expected a profile (behance.net/username) "
+                "or project (behance.net/gallery/ID/name) URL."
             )
             return
 
@@ -274,17 +293,17 @@ class BedownApp(ctk.CTk):
             self._output_dir = _default_output(url)
 
         opts = ScrapeOptions(
-            profile_url=url,
+            url=url,
             output_dir=self._output_dir,
             max_width=max_width,
             headless=True,
             delay=delay,
         )
 
+        self._hide_success_card()
         self._clear_status()
         self._append_status(f"Starting download → {self._output_dir}")
         self._show_progress(True)
-        self._show_open_button(False)
         self.download_button.configure(text="Cancel")
 
         self._cancel_event = threading.Event()
@@ -346,14 +365,75 @@ class BedownApp(ctk.CTk):
         if done.cancelled:
             self._append_status("Run cancelled.")
         else:
-            self._append_status(
-                f"Done — {done.saved} projects saved, "
-                f"{done.images} images downloaded, "
-                f"{done.skipped} skipped"
-                + (f", {done.failed} failed" if done.failed else "")
-            )
-            self._show_open_button(True)
+            self._show_success_card(done)
         self._reset_after_run()
+
+    def _show_success_card(self, done: _Done) -> None:
+        self._status_label.pack_forget()
+        self.status_box.pack_forget()
+
+        frame = ctk.CTkFrame(self._content_frame, corner_radius=12)
+        frame.pack(fill="both", expand=True)
+        self._success_frame = frame
+
+        ctk.CTkLabel(
+            frame, text="✓  Download complete",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color=("green", "#4ade80"),
+        ).pack(pady=(28, 4))
+
+        proj_word = "project" if done.saved == 1 else "projects"
+        img_word = "image" if done.images == 1 else "images"
+        ctk.CTkLabel(
+            frame,
+            text=f"{done.saved} {proj_word} · {done.images} {img_word} saved",
+            text_color=("gray35", "gray65"),
+            font=ctk.CTkFont(size=13),
+        ).pack(pady=(0, 14))
+
+        ctk.CTkButton(
+            frame, text="Open output folder",
+            command=self._open_output_folder,
+        ).pack(pady=(0, 18))
+
+        ctk.CTkLabel(
+            frame, text="Enjoyed it? Tell someone →",
+            text_color=("gray40", "gray60"),
+            font=ctk.CTkFont(size=12),
+        ).pack(pady=(0, 8))
+
+        share_row = ctk.CTkFrame(frame, fg_color="transparent")
+        share_row.pack(pady=(0, 28))
+
+        tweet_text = urllib.parse.quote(
+            "Just downloaded my entire Behance portfolio with Bedown"
+            " — free, open-source, no login needed → https://github.com/abhishekaggy/bedown"
+        )
+        ctk.CTkButton(
+            share_row, text="Share on X (Twitter)",
+            fg_color="transparent", border_width=1, width=160,
+            command=lambda: webbrowser.open(
+                f"https://twitter.com/intent/tweet?text={tweet_text}"
+            ),
+        ).pack(side="left", padx=6)
+
+        li_url = urllib.parse.quote("https://github.com/abhishekaggy/bedown")
+        ctk.CTkButton(
+            share_row, text="Share on LinkedIn",
+            fg_color="transparent", border_width=1, width=160,
+            command=lambda: webbrowser.open(
+                f"https://www.linkedin.com/sharing/share-offsite/?url={li_url}"
+            ),
+        ).pack(side="left", padx=6)
+
+    def _hide_success_card(self) -> None:
+        if self._success_frame is not None:
+            self._success_frame.destroy()
+            self._success_frame = None
+        if not self._status_label.winfo_ismapped():
+            self._status_label.pack(fill="x", pady=(8, 2))
+        if not self.status_box.winfo_ismapped():
+            self.status_box.pack(fill="both", expand=True)
 
     def _reset_after_run(self) -> None:
         self.download_button.configure(text="Download", state="normal")

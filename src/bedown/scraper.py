@@ -40,7 +40,7 @@ ProgressFn = Callable[[int, int], None]
 
 @dataclass
 class ScrapeOptions:
-    profile_url: str
+    url: str
     output_dir: Path
     max_width: int = 1200
     headless: bool = True
@@ -79,10 +79,6 @@ def username_from_url(url: str) -> str:
     return parts[0] if parts else "behance"
 
 
-def default_output_dir(profile_url: str) -> Path:
-    return Path.cwd() / f"{username_from_url(profile_url)}-portfolio"
-
-
 def is_valid_behance_profile_url(url: str) -> bool:
     try:
         u = urlparse(url)
@@ -98,6 +94,29 @@ def is_valid_behance_profile_url(url: str) -> bool:
     if parts[0] in ("gallery", "search", "galleries"):
         return False
     return True
+
+
+def is_valid_behance_project_url(url: str) -> bool:
+    try:
+        u = urlparse(url)
+    except Exception:
+        return False
+    if u.scheme not in ("http", "https"):
+        return False
+    if not u.netloc.endswith("behance.net"):
+        return False
+    parts = [p for p in u.path.split("/") if p]
+    return len(parts) >= 2 and parts[0] == "gallery" and parts[1].isdigit()
+
+
+def is_valid_behance_url(url: str) -> bool:
+    return is_valid_behance_profile_url(url) or is_valid_behance_project_url(url)
+
+
+def default_output_dir(url: str) -> Path:
+    if is_valid_behance_project_url(url):
+        return Path.cwd() / slug_from_url(url)
+    return Path.cwd() / f"{username_from_url(url)}-portfolio"
 
 
 async def auto_scroll(page: Page, pause_ms: int = 800, max_idle: int = 4) -> None:
@@ -257,7 +276,6 @@ async def _run_async(
 ) -> ScrapeResult:
     result = ScrapeResult()
     opts.output_dir.mkdir(parents=True, exist_ok=True)
-    summary: list[dict] = []
 
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=opts.headless)
@@ -267,116 +285,187 @@ async def _run_async(
         page = await context.new_page()
 
         try:
-            log(f"Collecting project URLs from {opts.profile_url} …")
-            try:
-                project_urls = await collect_project_urls(page, opts.profile_url)
-            except Exception as e:
-                log(f"! Could not load profile: {e}")
-                result.errors.append(str(e))
-                return result
-
-            total = len(project_urls)
-            log(f"Found {total} project URLs.")
-            if progress:
-                progress(0, total)
-
-            async with httpx.AsyncClient(
-                headers={"User-Agent": USER_AGENT, "Referer": "https://www.behance.net/"},
-                follow_redirects=True,
-            ) as client:
-                for i, url in enumerate(project_urls, 1):
-                    _check_cancel(cancel_event)
-
-                    slug = slug_from_url(url)
-                    project_dir = opts.output_dir / slug
-
-                    if _project_already_done(project_dir):
-                        log(f"[{i}/{total}] {slug} — already downloaded, skipping")
-                        result.skipped += 1
-                        try:
-                            existing = json.loads((project_dir / "meta.json").read_text())
-                            summary.append({
-                                "slug": slug,
-                                "title": existing.get("title", ""),
-                                "url": url,
-                                "tags": existing.get("tags", []),
-                                "image_count": len(existing.get("images", []) or []),
-                            })
-                        except Exception:
-                            pass
-                        if progress:
-                            progress(i, total)
-                        continue
-
-                    log(f"[{i}/{total}] {url}")
-                    try:
-                        data = await scrape_project(page, url)
-                    except Exception as e:
-                        log(f"  ! scrape failed: {e}")
-                        result.failed += 1
-                        result.errors.append(f"{url}: {e}")
-                        if progress:
-                            progress(i, total)
-                        continue
-
-                    if data is None:
-                        log(f"  ! unavailable (404 or login required), skipping")
-                        result.skipped += 1
-                        if progress:
-                            progress(i, total)
-                        continue
-
-                    project_dir.mkdir(parents=True, exist_ok=True)
-
-                    saved_files: list[str] = []
-                    for j, img_url in enumerate(data["image_urls"], 1):
-                        _check_cancel(cancel_event)
-                        dest = project_dir / f"{j:03d}"
-                        ok = await download_and_resize(
-                            client, img_url, dest, opts.max_width, log
-                        )
-                        if ok:
-                            saved_files.append(dest.with_suffix(".jpg").name)
-
-                    meta = {
-                        "title": data["title"],
-                        "url": url,
-                        "description": data["description"],
-                        "tags": data["tags"],
-                        "images": saved_files,
-                    }
-                    (project_dir / "meta.json").write_text(
-                        json.dumps(meta, indent=2, ensure_ascii=False)
-                    )
-
-                    summary.append({
-                        "slug": slug,
-                        "title": data["title"],
-                        "url": url,
-                        "tags": data["tags"],
-                        "image_count": len(saved_files),
-                    })
-                    result.saved += 1
-                    result.images += len(saved_files)
-                    log(f"  ✓ {slug}: {len(saved_files)} images")
-
-                    if progress:
-                        progress(i, total)
-
-                    if i < total and opts.delay > 0:
-                        slept = 0.0
-                        while slept < opts.delay:
-                            _check_cancel(cancel_event)
-                            step = min(0.2, opts.delay - slept)
-                            await asyncio.sleep(step)
-                            slept += step
+            if is_valid_behance_project_url(opts.url):
+                await _download_single_project(page, opts, log, cancel_event, progress, result)
+            else:
+                await _download_profile(page, opts, log, cancel_event, progress, result)
         finally:
             await browser.close()
+
+    return result
+
+
+async def _download_single_project(
+    page,
+    opts: ScrapeOptions,
+    log: LogFn,
+    cancel_event: Optional[threading.Event],
+    progress: Optional[ProgressFn],
+    result: ScrapeResult,
+) -> None:
+    log(f"Loading project {opts.url} …")
+    if progress:
+        progress(0, 1)
+
+    try:
+        data = await scrape_project(page, opts.url)
+    except Exception as e:
+        log(f"! Could not load project: {e}")
+        result.errors.append(str(e))
+        return
+
+    if data is None:
+        log("! Project unavailable (404 or login required)")
+        result.errors.append("unavailable")
+        return
+
+    async with httpx.AsyncClient(
+        headers={"User-Agent": USER_AGENT, "Referer": "https://www.behance.net/"},
+        follow_redirects=True,
+    ) as client:
+        saved_files: list[str] = []
+        for j, img_url in enumerate(data["image_urls"], 1):
+            _check_cancel(cancel_event)
+            dest = opts.output_dir / f"{j:03d}"
+            ok = await download_and_resize(client, img_url, dest, opts.max_width, log)
+            if ok:
+                saved_files.append(dest.with_suffix(".jpg").name)
+
+    meta = {
+        "title": data["title"],
+        "url": opts.url,
+        "description": data["description"],
+        "tags": data["tags"],
+        "images": saved_files,
+    }
+    (opts.output_dir / "meta.json").write_text(
+        json.dumps(meta, indent=2, ensure_ascii=False)
+    )
+
+    result.saved = 1
+    result.images = len(saved_files)
+    log(f"✓ {slug_from_url(opts.url)}: {len(saved_files)} images")
+    if progress:
+        progress(1, 1)
+
+
+async def _download_profile(
+    page,
+    opts: ScrapeOptions,
+    log: LogFn,
+    cancel_event: Optional[threading.Event],
+    progress: Optional[ProgressFn],
+    result: ScrapeResult,
+) -> None:
+    summary: list[dict] = []
+
+    log(f"Collecting project URLs from {opts.url} …")
+    try:
+        project_urls = await collect_project_urls(page, opts.url)
+    except Exception as e:
+        log(f"! Could not load profile: {e}")
+        result.errors.append(str(e))
+        return
+
+    total = len(project_urls)
+    log(f"Found {total} project URLs.")
+    if progress:
+        progress(0, total)
+
+    async with httpx.AsyncClient(
+        headers={"User-Agent": USER_AGENT, "Referer": "https://www.behance.net/"},
+        follow_redirects=True,
+    ) as client:
+        for i, url in enumerate(project_urls, 1):
+            _check_cancel(cancel_event)
+
+            slug = slug_from_url(url)
+            project_dir = opts.output_dir / slug
+
+            if _project_already_done(project_dir):
+                log(f"[{i}/{total}] {slug} — already downloaded, skipping")
+                result.skipped += 1
+                try:
+                    existing = json.loads((project_dir / "meta.json").read_text())
+                    summary.append({
+                        "slug": slug,
+                        "title": existing.get("title", ""),
+                        "url": url,
+                        "tags": existing.get("tags", []),
+                        "image_count": len(existing.get("images", []) or []),
+                    })
+                except Exception:
+                    pass
+                if progress:
+                    progress(i, total)
+                continue
+
+            log(f"[{i}/{total}] {url}")
+            try:
+                data = await scrape_project(page, url)
+            except Exception as e:
+                log(f"  ! scrape failed: {e}")
+                result.failed += 1
+                result.errors.append(f"{url}: {e}")
+                if progress:
+                    progress(i, total)
+                continue
+
+            if data is None:
+                log(f"  ! unavailable (404 or login required), skipping")
+                result.skipped += 1
+                if progress:
+                    progress(i, total)
+                continue
+
+            project_dir.mkdir(parents=True, exist_ok=True)
+
+            saved_files: list[str] = []
+            for j, img_url in enumerate(data["image_urls"], 1):
+                _check_cancel(cancel_event)
+                dest = project_dir / f"{j:03d}"
+                ok = await download_and_resize(
+                    client, img_url, dest, opts.max_width, log
+                )
+                if ok:
+                    saved_files.append(dest.with_suffix(".jpg").name)
+
+            meta = {
+                "title": data["title"],
+                "url": url,
+                "description": data["description"],
+                "tags": data["tags"],
+                "images": saved_files,
+            }
+            (project_dir / "meta.json").write_text(
+                json.dumps(meta, indent=2, ensure_ascii=False)
+            )
+
+            summary.append({
+                "slug": slug,
+                "title": data["title"],
+                "url": url,
+                "tags": data["tags"],
+                "image_count": len(saved_files),
+            })
+            result.saved += 1
+            result.images += len(saved_files)
+            log(f"  ✓ {slug}: {len(saved_files)} images")
+
+            if progress:
+                progress(i, total)
+
+            if i < total and opts.delay > 0:
+                slept = 0.0
+                while slept < opts.delay:
+                    _check_cancel(cancel_event)
+                    step = min(0.2, opts.delay - slept)
+                    await asyncio.sleep(step)
+                    slept += step
 
     (opts.output_dir / "projects.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False)
     )
-    return result
 
 
 def run(
