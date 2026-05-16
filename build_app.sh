@@ -32,5 +32,20 @@ if [[ ! -d "$APP" ]]; then
     exit 1
 fi
 
+# macOS Gatekeeper rejects bundles whose ad-hoc signature is broken — the
+# user sees "Bedown.app is damaged" on first launch. PyInstaller's built-in
+# signing pass fails when the build directory has com.apple.FinderInfo or
+# com.apple.fileprovider xattrs (iCloud Drive auto-adds these to anything
+# under ~/Documents). Strip every xattr, then re-sign ad-hoc.
+echo "==> Stripping extended attributes"
+xattr -cr "$APP"
+
+echo "==> Ad-hoc signing"
+rm -rf "$APP/Contents/_CodeSignature"
+codesign --force --deep --sign - "$APP"
+
+echo "==> Verifying signature"
+codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | tail -3
+
 echo "==> Done: $APP"
 du -sh "$APP"
