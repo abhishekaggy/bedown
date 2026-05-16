@@ -14,8 +14,8 @@ Bedown is a small open-source Mac app for designers who want their Behance work 
 
 1. Grab the latest `Bedown.app.zip` from the [Releases page](../../releases) and unzip it.
 2. **First launch only:** right-click `Bedown.app` → **Open** → confirm. (macOS Gatekeeper blocks unsigned apps on first launch — this is the standard one-time bypass.)
-3. Paste a Behance profile URL (e.g. `https://www.behance.net/yourname`).
-4. Click **Download**. Files land in `~/Desktop/<username>-portfolio/`.
+3. Paste a Behance profile URL (e.g. `https://www.behance.net/yourname`) or a single project URL (e.g. `https://www.behance.net/gallery/12345/Name`).
+4. Click **Download**. Files land in `~/Desktop/<username>-portfolio/` (or `~/Desktop/<project-slug>/` for a single project).
 
 ### For developers (CLI)
 
@@ -25,10 +25,13 @@ cd bedown
 python3 -m venv .venv
 source .venv/bin/activate
 pip install .
-playwright install chromium
 
 bedown https://www.behance.net/yourname
+# or
+bedown https://www.behance.net/gallery/12345/Name
 ```
+
+No browser install required — the scraper is pure-Python (httpx + Pillow).
 
 The same scraper is used by both the CLI and the GUI — see [CONTRIBUTING.md](CONTRIBUTING.md) for the architecture.
 
@@ -67,10 +70,9 @@ Each `meta.json` looks like:
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `profile_url` | (required) | A Behance profile URL like `https://www.behance.net/yourname` |
-| `-o`, `--output` | `<username>-portfolio` in cwd | Where to save everything |
+| `url` | (required) | A Behance profile URL (`behance.net/yourname`) or single project URL (`behance.net/gallery/12345/Name`) |
+| `-o`, `--output` | derived from URL in cwd | Where to save everything |
 | `--max-width` | `1200` | Resize images to this max width (px). Smaller = smaller files. |
-| `--no-headless` | off | Show the Chromium browser window (useful for debugging) |
 | `--delay` | `2.0` | Seconds to wait between projects (be polite to Behance) |
 | `--version` | — | Print the version and exit |
 
@@ -80,10 +82,10 @@ Re-runs are resumable: any project whose folder already has a valid `meta.json` 
 
 ## Limitations (read these before filing a bug)
 
-- **Login-required and adult-content projects are skipped.** Bedown runs in a logged-out browser; projects behind Behance's age gate or login wall are reported as "unavailable, skipping".
-- **Behance can change its HTML at any time.** The selectors in [`src/bedown/scraper.py`](src/bedown/scraper.py) are best-effort against the current layout. If a new version of Behance ships and Bedown stops finding images or tags, please open an issue with the URL of a project that broke.
-- **Large portfolios take time.** A 100-project portfolio with hundreds of images can easily take 15–30 minutes. The default 2-second inter-project delay is intentional — please don't lower it to something rude.
-- **Mac only for now.** The bundled `.app` is built for macOS arm64 (Apple Silicon). The CLI works anywhere Python and Playwright run. Intel Macs and Windows builds are welcome PRs.
+- **Login-required and adult-content projects are skipped.** Bedown fetches public pages only; projects behind Behance's age gate or login wall are reported as "unavailable, skipping".
+- **Profile downloads are limited to what Behance lists publicly.** Behance only exposes the first set of projects to anonymous visitors (no infinite-scroll without a browser session). For older projects, paste each project URL directly — Bedown handles individual gallery URLs end-to-end.
+- **Behance can change its HTML at any time.** The JSON parser in [`src/bedown/scraper.py`](src/bedown/scraper.py) targets the SSR state Behance ships today. If the format changes and Bedown stops finding images or tags, please open an issue with the URL of a project that broke.
+- **Mac only for now.** The bundled `.app` is built for macOS arm64 (Apple Silicon). The CLI is pure-Python and runs anywhere Python 3.10+ runs. Intel Macs and Windows builds are welcome PRs.
 - **Unsigned and unnotarized.** First launch needs the right-click → Open dance. If you'd like to help set up code signing, see the issue tracker.
 
 ---
