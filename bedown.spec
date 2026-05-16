@@ -1,12 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec for Bedown.
 
-Builds a macOS .app that bundles its own Chromium and Playwright driver, so
-the user does not need to run `playwright install` after downloading.
+Builds a macOS .app. The scraper is pure-Python (httpx + Pillow), so the
+bundle no longer carries Chromium or Node.js — the .app is tiny and the
+user does not need any post-install setup.
 
-Onedir layout (NOT onefile): Playwright launches a separate Node-based
-driver process plus Chromium itself, and onefile's _MEIPASS extraction
-races those subprocesses. Onedir is the only reliable choice.
+Onedir layout (NOT onefile): onefile extracts to a temp dir on every
+launch, which is slow and trips macOS Gatekeeper on signed bundles.
 
 Build:
     pyinstaller bedown.spec
@@ -14,35 +14,10 @@ Output:
     dist/Bedown.app
 """
 
-from pathlib import Path
-
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 
-# --- Locate Playwright assets that must be bundled --------------------------
-
-import playwright  # noqa: E402  (intentional: spec runs at build time)
-
-_playwright_pkg = Path(playwright.__file__).parent
-_playwright_driver = _playwright_pkg / "driver"
-if not _playwright_driver.is_dir():
-    raise SystemExit(
-        f"Playwright driver not found at {_playwright_driver}. "
-        "Reinstall the playwright package."
-    )
-
-# Chromium is NOT included via `datas`. PyInstaller's binary processor
-# tries to re-sign/strip every Mach-O it encounters, which blows up on the
-# nested 'Google Chrome for Testing.app' inside chromium-NNNN. Instead, the
-# build_app.sh wrapper copies both chromium-NNNN and chromium_headless_shell-NNNN
-# into Bedown.app/Contents/Resources/ms-playwright/ AFTER PyInstaller finishes.
-# The runtime.py helper finds them there.
-
-# --- Datas / hidden imports -------------------------------------------------
-
-datas = [
-    (str(_playwright_driver), "playwright/driver"),
-]
+datas = []
 datas += collect_data_files("customtkinter")
 
 hiddenimports = [
@@ -53,10 +28,7 @@ hiddenimports = [
     "darkdetect",
 ]
 hiddenimports += collect_submodules("customtkinter")
-hiddenimports += collect_submodules("playwright")
 
-
-# --- Analysis / build graph -------------------------------------------------
 
 block_cipher = None
 
@@ -73,6 +45,7 @@ a = Analysis(
         # Keep the bundle lean — these aren't needed.
         "pytest",
         "tkinter.test",
+        "playwright",
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -119,8 +92,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "Bedown",
         "CFBundleDisplayName": "Bedown",
-        "CFBundleShortVersionString": "0.1.0",
-        "CFBundleVersion": "0.1.0",
+        "CFBundleShortVersionString": "0.2.0",
+        "CFBundleVersion": "0.2.0",
         "NSHighResolutionCapable": True,
         "LSMinimumSystemVersion": "11.0",
         "NSRequiresAquaSystemAppearance": False,

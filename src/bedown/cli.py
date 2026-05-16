@@ -42,19 +42,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Resize images to this max width in pixels (default: 1200)",
     )
     p.add_argument(
-        "--no-headless",
-        dest="headless",
-        action="store_false",
-        help="Show the Chromium browser window (default: headless)",
-    )
-    p.add_argument(
         "--delay",
         type=float,
         default=2.0,
         help="Seconds to wait between projects (default: 2.0)",
     )
     p.add_argument("--version", action="version", version=f"bedown {__version__}")
-    p.set_defaults(headless=True)
     return p
 
 
@@ -76,7 +69,6 @@ def main(argv: list[str] | None = None) -> int:
         url=args.url,
         output_dir=output_dir,
         max_width=args.max_width,
-        headless=args.headless,
         delay=args.delay,
     )
 
