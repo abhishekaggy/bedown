@@ -4,12 +4,12 @@ Thanks for considering a contribution. Bedown is a small project — bug reports
 
 ## How the codebase is laid out
 
-Two layers, both in `src/bedown/`:
+All modules live in `src/bedown/`:
 
-- **`scraper.py`** — the actual Playwright-driven scrape, plus `run()`, the single entry point. Takes a `ScrapeOptions` dataclass and optional `log` / `progress` / `cancel_event` callbacks. The CLI passes a `tqdm` writer for `log`; the GUI passes a queue.
+- **`scraper.py`** — the pure-Python scrape. Fetches Behance pages with `httpx`, parses the embedded SSR JSON state (`<script id="beconfig-store_state">`) for titles, descriptions, tags, and image URLs, then downloads each image at the highest available resolution. Exposes `run(ScrapeOptions, log=..., progress=..., cancel_event=...)` as the single entry point. The CLI passes a `tqdm` writer for `log`; the GUI passes a queue.
 - **`cli.py`** — the `bedown` command. Argparse plus a `tqdm` progress bar. Calls `scraper.run()` directly.
 - **`gui.py`** + **`gui_main.py`** — the CustomTkinter window. The Download button starts a worker thread that calls the same `scraper.run()`. Log lines and progress events flow back via a `queue.Queue`; the main thread polls every 100 ms and updates the UI.
-- **`runtime.py`** — bundle-aware path helpers. Sets `PLAYWRIGHT_BROWSERS_PATH` before any `playwright` import when running inside a PyInstaller .app, and picks `~/Desktop` as the default output dir in that case.
+- **`runtime.py`** — bundle helpers. Detects whether we're running inside a PyInstaller `.app` and picks `~/Desktop` as the default output dir in that case.
 
 The CLI works without the GUI dependencies, so a server install can do `pip install bedown` and use the CLI alone.
 
@@ -22,14 +22,16 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 pip install .
-playwright install chromium
 ```
 
 Then:
 
 ```bash
 # CLI
-bedown https://www.behance.net/foramdivrania --no-headless
+bedown https://www.behance.net/foramdivrania
+
+# Single project
+bedown https://www.behance.net/gallery/12345/Project-Name
 
 # GUI
 bedown-gui
@@ -38,6 +40,8 @@ bedown-gui
 python -m bedown https://www.behance.net/foramdivrania
 python -m bedown.gui_main
 ```
+
+No browser install required — the scraper is pure-Python (`httpx` + `Pillow`).
 
 ### Heads-up on Python 3.14 + editable installs
 
@@ -57,11 +61,9 @@ brew install python-tk@3.14
 ./build_app.sh
 ```
 
-This runs `pyinstaller bedown.spec` and then post-copies the local Playwright Chromium cache (both `chromium-NNNN` and `chromium_headless_shell-NNNN`) into `dist/Bedown.app/Contents/Resources/ms-playwright/`.
+This runs `pyinstaller bedown.spec`, strips extended attributes (iCloud Drive auto-stamps `com.apple.fileprovider` xattrs on anything under `~/Documents`, which breaks PyInstaller's signing pass), re-signs ad-hoc, and packages a clean `Bedown.app.zip` via `ditto` (which avoids AppleDouble `._*` pollution). Result: `dist/Bedown.app` (~40 MB) and `dist/Bedown.app.zip` (~19 MB).
 
-We can't ship Chromium via the spec's `datas` because PyInstaller's binary processor tries to re-sign every Mach-O it sees and chokes on the nested `Google Chrome for Testing.app`. The post-copy is the workaround.
-
-The result is unsigned. First launch on any new Mac requires right-click → Open. If you'd like to help set up signing + notarization, that would be a great PR.
+The result is unsigned (ad-hoc only). First launch on any new Mac requires right-click → Open. If you'd like to help set up signing + notarization, that would be a great PR.
 
 ## Filing issues
 

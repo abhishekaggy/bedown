@@ -41,6 +41,9 @@ Icon
 *.swp
 *.swo
 
+# Claude Code worktrees
+.claude/
+
 # Output of test runs
 *-portfolio/
 foram-portfolio/
