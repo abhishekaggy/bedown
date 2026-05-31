@@ -34,25 +34,37 @@ if [[ ! -d "$APP" ]]; then
     exit 1
 fi
 
-# macOS Gatekeeper rejects bundles whose ad-hoc signature is broken — the
-# user sees "Bedown.app is damaged" on first launch. PyInstaller's built-in
-# signing pass fails when the build directory has com.apple.FinderInfo or
-# com.apple.fileprovider xattrs (iCloud Drive auto-adds these to anything
-# under ~/Documents). Strip every xattr, then re-sign ad-hoc.
+# iCloud Drive (the repo lives under ~/Documents) re-stamps
+# com.apple.FinderInfo and com.apple.fileprovider xattrs on bundle files
+# the moment we touch them, which makes `codesign --deep --strict` reject
+# the result. Sign in a /tmp staging dir where iCloud can't reach, then
+# move the cleaned bundle back into dist/.
+STAGE="$(mktemp -d -t bedown-build)"
+APP_STAGED="$STAGE/Bedown.app"
+trap 'rm -rf "$STAGE"' EXIT
+
+echo "==> Staging bundle in $STAGE"
+cp -R "$APP" "$APP_STAGED"
+
 echo "==> Stripping extended attributes"
-xattr -cr "$APP"
+xattr -cr "$APP_STAGED"
 
 echo "==> Ad-hoc signing"
-rm -rf "$APP/Contents/_CodeSignature"
-codesign --force --deep --sign - "$APP"
+rm -rf "$APP_STAGED/Contents/_CodeSignature"
+codesign --force --deep --sign - "$APP_STAGED"
 
 echo "==> Verifying signature"
-codesign --verify --deep --strict --verbose=2 "$APP"
+codesign --verify --deep --strict --verbose=2 "$APP_STAGED"
 
-# ditto produces a zip with no AppleDouble `._*` entries and no __MACOSX/
-# directory, which `zip -r` would otherwise create when xattrs are present.
+# --norsrc / --noextattr / --noacl tell ditto to omit metadata streams so
+# the zip carries no AppleDouble `._*` sidecars. The embedded ad-hoc
+# signature is preserved.
 echo "==> Packaging Bedown.app.zip"
-(cd dist && /usr/bin/ditto -c -k --keepParent Bedown.app Bedown.app.zip)
+(cd "$STAGE" && /usr/bin/ditto -c -k --keepParent --norsrc --noextattr --noacl Bedown.app "$ROOT/$ZIP")
+
+echo "==> Replacing $APP with cleaned, signed bundle"
+rm -rf "$APP"
+mv "$APP_STAGED" "$APP"
 
 echo "==> Verifying zip is clean (no AppleDouble files)"
 if unzip -l "$ZIP" | awk '{print $NF}' | grep -E '(^|/)\._|^__MACOSX/' >/dev/null; then

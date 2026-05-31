@@ -92,8 +92,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "Bedown",
         "CFBundleDisplayName": "Bedown",
-        "CFBundleShortVersionString": "0.2.0",
-        "CFBundleVersion": "0.2.0",
+        "CFBundleShortVersionString": "0.2.1",
+        "CFBundleVersion": "0.2.1",
         "NSHighResolutionCapable": True,
         "LSMinimumSystemVersion": "11.0",
         "NSRequiresAquaSystemAppearance": False,
